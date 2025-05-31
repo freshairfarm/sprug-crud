@@ -6,3 +6,8 @@ pub struct Todo {
     pub content: String,
     pub completed: bool,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateTodo {
+    pub content: String,
+}
