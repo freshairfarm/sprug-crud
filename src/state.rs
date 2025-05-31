@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::models::Todo;
+
 // Arc: Atomic Reference Counted
 //  This is similar to a smart pointer.
 //  Grants multiple ownership over something
@@ -13,4 +15,4 @@ use std::{
 // tl;dr:
 //     Arc gives multiple people keys
 //     Mutex makes sure only one person can unlock at any time
-pub type Db = Arc<Mutex<HashMap<i8, String>>>;
+pub type Db = Arc<Mutex<HashMap<i8, Todo>>>;
