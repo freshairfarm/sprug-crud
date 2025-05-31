@@ -7,8 +7,9 @@ use std::{
 
 use axum::{
     Json, Router,
-    extract::State,
-    routing::{get, post},
+    extract::{Path, State},
+    http::StatusCode,
+    routing::{get, post, put},
 };
 use state::Db;
 
@@ -22,24 +23,14 @@ async fn main() {
     // Add a shared state
     let shared_state = Arc::new(Mutex::new(HashMap::<i8, models::Todo>::new()));
 
-    // "Seed data"
-    {
-        let mut db = shared_state.lock().unwrap();
-        db.insert(
-            1,
-            models::Todo {
-                id: 1,
-                content: "Finish this API!".to_string(),
-                completed: false,
-            },
-        );
-    }
-
     // build app and attach shared state
     let app = Router::new()
         .route("/", get(root))
-        .route("/todo", get(get_todos))
-        .route("/todos", post(create_todo))
+        .route("/todo", get(get_todos).post(create_todo))
+        .route(
+            "/todo/{id}",
+            post(update_todo).get(get_todo).delete(delete_todo),
+        )
         .with_state(shared_state);
 
     // Create our listener
@@ -50,11 +41,41 @@ async fn main() {
     // Run it!
     axum::serve(listener, app).await.expect("Axum error");
 }
+async fn delete_todo(State(state): State<Db>, Path(id): Path<i8>) {
+    todo!()
+}
+async fn get_todo(
+    State(state): State<Db>,
+    Path(id): Path<i8>,
+) -> Result<Json<models::Todo>, StatusCode> {
+    let db = state.lock().unwrap();
+    if let Some(todo) = db.get(&id) {
+        Ok(Json(todo.clone()))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+async fn update_todo(
+    State(state): State<Db>,
+    Path(id): Path<i8>,
+    Json(payload): Json<models::UpdateTodo>,
+) -> Result<Json<models::Todo>, StatusCode> {
+    let mut db = state.lock().unwrap();
+
+    if let Some(todo) = db.get_mut(&id) {
+        todo.content = payload.content;
+        if let Some(todo_status) = payload.completed {
+            todo.completed = todo_status;
+        }
+        Ok(Json(todo.clone()))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
 async fn create_todo(
     State(state): State<Db>,
     Json(payload): Json<models::CreateTodo>,
 ) -> Json<models::Todo> {
-    // Q: This is shorter, but what are the risks?
     let mut db = state.lock().unwrap();
     let new_id = db.keys().max().map(|id| id + 1).unwrap_or(1);
     let todo = models::Todo {
@@ -74,10 +95,6 @@ async fn get_todos(State(state): State<Db>) -> Json<Vec<models::Todo>> {
         Json(Vec::new())
     }
 }
-async fn root(State(state): State<Db>) -> String {
-    if let Ok(hashmap) = state.lock() {
-        format!("{:#?}", hashmap.values())
-    } else {
-        "Hello, SPRUG!".to_string()
-    }
+async fn root() -> &'static str {
+    "Hello, SPRUG!"
 }
