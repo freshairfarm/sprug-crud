@@ -5,7 +5,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use axum::{Json, Router, extract::State, routing::get};
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
 use state::Db;
 
 const LISTEN_ADDRESS: &str = "127.0.0.1:8088";
@@ -35,6 +39,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/todo", get(get_todos))
+        .route("/todos", post(create_todo))
         .with_state(shared_state);
 
     // Create our listener
@@ -44,6 +49,22 @@ async fn main() {
 
     // Run it!
     axum::serve(listener, app).await.expect("Axum error");
+}
+async fn create_todo(
+    State(state): State<Db>,
+    Json(payload): Json<models::CreateTodo>,
+) -> Json<models::Todo> {
+    // Q: This is shorter, but what are the risks?
+    let mut db = state.lock().unwrap();
+    let new_id = db.keys().max().map(|id| id + 1).unwrap_or(1);
+    let todo = models::Todo {
+        id: new_id,
+        content: payload.content,
+        completed: false,
+    };
+
+    db.insert(new_id, todo.clone());
+    Json(todo)
 }
 async fn get_todos(State(state): State<Db>) -> Json<Vec<models::Todo>> {
     if let Ok(hashmap) = state.lock() {
