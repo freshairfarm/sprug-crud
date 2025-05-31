@@ -11,3 +11,9 @@ pub struct Todo {
 pub struct CreateTodo {
     pub content: String,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UpdateTodo {
+    pub content: String,
+    pub completed: Option<bool>,
+}
