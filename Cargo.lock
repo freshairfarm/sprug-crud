@@ -533,6 +533,7 @@ name = "sprug-crud"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "serde",
  "tokio",
  "tracing-subscriber",
 ]
